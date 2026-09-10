@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Video Upscaler</title>
+
+<style>
+
+*{
+box-sizing:border-box;
+}
+
+body{
+margin:0;
+font-family:Arial,sans-serif;
+background:#080b12;
+color:white;
+min-height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:20px;
+}
+
+.container{
+width:100%;
+max-width:520px;
+background:#111722;
+border:1px solid #252d3b;
+border-radius:22px;
+padding:25px;
+box-shadow:0 20px 60px rgba(0,0,0,.45);
+}
+
+h1{
+text-align:center;
+margin:0;
+font-size:30px;
+}
+
+.subtitle{
+text-align:center;
+color:#9da7b8;
+margin:10px 0 25px;
+}
+
+.upload{
+border:2px dashed #39445a;
+border-radius:16px;
+padding:30px 15px;
+text-align:center;
+cursor:pointer;
+margin-bottom:20px;
+}
+
+.upload:hover{
+border-color:#6d7cff;
+}
+
+input[type=file]{
+display:none;
+}
+
+.file-name{
+color:#8fa2ff;
+margin-top:10px;
+font-size:14px;
+word-break:break-word;
+}
+
+.options{
+display:grid;
+gap:12px;
+}
+
+.option{
+background:#171e2b;
+border:1px solid #293447;
+border-radius:14px;
+padding:15px;
+cursor:pointer;
+}
+
+.option input{
+margin-right:10px;
+}
+
+.option strong{
+display:block;
+font-size:17px;
+}
+
+.option span{
+color:#8e99aa;
+font-size:13px;
+}
+
+button{
+width:100%;
+border:0;
+border-radius:14px;
+padding:16px;
+margin-top:20px;
+font-size:17px;
+font-weight:bold;
+cursor:pointer;
+background:#6d7cff;
+color:white;
+}
+
+button:disabled{
+opacity:.5;
+cursor:not-allowed;
+}
+
+.status{
+text-align:center;
+margin-top:18px;
+color:#aeb8c8;
+font-size:14px;
+}
+
+.download{
+display:none;
+margin-top:15px;
+text-align:center;
+background:#1c8f5a;
+padding:15px;
+border-radius:14px;
+text-decoration:none;
+color:white;
+font-weight:bold;
+}
+
+.note{
+margin-top:20px;
+font-size:12px;
+color:#7f8999;
+text-align:center;
+line-height:1.5;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>⚡ Video Upscaler</h1>
+
+<div class="subtitle">
+1080p • 2K • 4K
+</div>
+
+<label class="upload">
+
+📁 Tap to select video
+
+<input
+type="file"
+id="video"
+accept="video/*">
+
+<div
+class="file-name"
+id="fileName">
+No video selected
+</div>
+
+</label>
+
+
+<div class="options">
+
+<label class="option">
+
+<input
+type="radio"
+name="preset"
+value="1080_60"
+checked>
+
+<strong>1080p • 60 FPS</strong>
+
+<span>1080 × 1920</span>
+
+</label>
+
+
+<label class="option">
+
+<input
+type="radio"
+name="preset"
+value="2k_90">
+
+<strong>2K • 90 FPS</strong>
+
+<span>1440 × 2560</span>
+
+</label>
+
+
+<label class="option">
+
+<input
+type="radio"
+name="preset"
+value="4k_120">
+
+<strong>4K • 120 FPS</strong>
+
+<span>2160 × 3840</span>
+
+</label>
+
+</div>
+
+
+<button id="process">
+🚀 Process Video
+</button>
+
+<div
+class="status"
+id="status">
+Ready
+</div>
+
+<a
+class="download"
+id="download"
+target="_blank">
+⬇️ Download Processed Video
+</a>
+
+<div class="note">
+
+Processing happens on the server.
+4K/120 FPS can require substantial processing time.
+This version uses FFmpeg scaling and frame-rate conversion.
+
+</div>
+
+</div>
+
+
+<script>
+
+const videoInput =
+document.getElementById("video");
+
+const fileName =
+document.getElementById("fileName");
+
+const processButton =
+document.getElementById("process");
+
+const status =
+document.getElementById("status");
+
+const download =
+document.getElementById("download");
+
+
+videoInput.addEventListener(
+"change",
+function(){
+
+if(this.files.length){
+
+fileName.textContent =
+this.files[0].name;
+
+}
+
+});
+
+
+processButton.addEventListener(
+"click",
+async function(){
+
+if(!videoInput.files.length){
+
+status.textContent =
+"Please select a video first.";
+
+return;
+
+}
+
+
+const preset =
+document.querySelector(
+'input[name="preset"]:checked'
+).value;
+
+
+const formData =
+new FormData();
+
+formData.append(
+"video",
+videoInput.files[0]
+);
+
+formData.append(
+"preset",
+preset
+);
+
+
+processButton.disabled = true;
+
+download.style.display = "none";
+
+status.textContent =
+"⏳ Processing... Please wait.";
+
+
+try{
+
+const response =
+await fetch(
+"/process",
+{
+method:"POST",
+body:formData
+}
+);
+
+
+const result =
+await response.json();
+
+
+if(result.success){
+
+status.textContent =
+"✅ Processing completed!";
+
+download.href =
+result.download;
+
+download.style.display =
+"block";
+
+}else{
+
+status.textContent =
+"❌ " +
+(result.error || "Processing failed.");
+
+}
+
+}catch(error){
+
+status.textContent =
+"❌ Server error.";
+
+console.error(error);
+
+}
+
+
+processButton.disabled = false;
+
+});
+
+</script>
+
+</body>
+
+  </html>
